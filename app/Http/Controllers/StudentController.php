@@ -3,14 +3,60 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
     // List all students
-    public function index()
+    public function index(Request $request)
     {
-        return Student::select('id','name','email','birthdate')->orderBy('id','desc')->paginate(10);
+        $studSQL = Student::select('id', 'name', 'email', 'birthdate');
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $wildcardSearch = '%' . $search . '%';
+            // Initialize flag to check if it's a valid date
+            $isDate = false;
+            $mysqlDate = "";
+            try {
+                // Attempt to parse the search term as a full date
+                $parsedDate = Carbon::parse($search);
+                $mysqlDate = $parsedDate->format('Y-m-d');
+                $isDate = true;
+            } catch (\Exception $e) {
+                // If parsing fails, treat it as partial input (not a full date)
+                $isDate = false;
+            }
+            // Build the query with a flexible search
+            $studSQL->where(function ($query) use ($wildcardSearch, $mysqlDate, $isDate, $search) {
+                // Search in name and email with wildcards
+                $query->where('name', 'like', $wildcardSearch)
+                    ->orWhere('email', 'like', $wildcardSearch);
+                // If it's a valid full date, search by exact date in birthdate
+                if ($isDate) {
+                    $query->orWhere('birthdate', $mysqlDate);
+                } else {
+                    // If not a valid date, perform a partial search on the birthdate (e.g. '%23%')
+                    $query->orWhere('birthdate', 'like', '%' . $search . '%');
+                }
+            });
+        }
+
+        // if ($request->has('search')) {
+        //     $search = '%' . $request->search . '%'; // Add % for wildcard search
+        //     $studSQL->where(function ($query) use ($search) {
+        //         $query->where('name', 'like', $search)
+        //             ->orWhere('email', 'like', $search)
+        //             ->orWhere('birthdate', 'like', $search);
+        //     });
+        // }
+        if ($request->has('sortKey') && $request->has('sortOrder')) {
+            $studSQL->orderBy($request->sortKey, $request->sortOrder);
+        } else {
+            $studSQL->latest();
+        }
+        return $studSQL->paginate(10);
     }
 
     // Show a specific student
