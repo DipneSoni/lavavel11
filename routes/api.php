@@ -22,6 +22,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user(); // Route to get authenticated user info
     });
+    Route::post('updateProfile', [UserController::class, 'updateProfile'])->name('updateProfile'); // Route for updateProfile
+    Route::post('changePassword', [UserController::class, 'changePassword'])->name('changePassword'); // Route for changePassword
     Route::post('logout', [UserController::class, 'logout'])->name('logout'); // Route for logging out
     Route::put('/posts/{id}', [PostController::class, 'update']); // or use PATCH
     Route::delete('/posts/{id}', [PostController::class, 'destroy']);
